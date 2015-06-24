@@ -4,7 +4,6 @@ import time
 import signal
 from os import system
 
-
 def config_log0(log0):
 	fmt='%(asctime)s %(levelname)s %(message)s'	
 	logging.basicConfig(filename=log0,format=fmt,level=logging.INFO)
@@ -16,13 +15,18 @@ def badblocks(drive,log1):
 	msg = "badblocks -wv %s >> %s 2>&1" %(drive,log1)
 	system(msg)
 
-def smartctl(drive,log1):
+def smartctl_scan(drive,log1):
 	with open(log1,"a") as f:
 		f.write("#### smartctl %s ####\n "%(time.strftime("%H:%M:%S")))
 		
 	logging.INFO("starting smartctl long test")
 	
 	msg = "smartctl -C --test=long  %s >> %s 2>&1" %(drive,log1)
+	system(msg)
+	
+def smartctl_status(drive,log1):
+	
+	msg = "smartctl -a %s >> %s" %(drive,log1)
 	system(msg)
 	
 def nohup():
@@ -39,11 +43,13 @@ if __name__ == "__main__":
 	nohup()
 	
 	while True:
+		
+		smartctl_status(drive,log1)
 	
 		for i in range(5):
 			badblocks(drive,log1)
 			
-		smartctl(drive,log1)
+		smartctl_scan(drive,log1)
 		
 		
 	
