@@ -47,7 +47,10 @@ if __name__ == "__main__":
 		smartctl_status(drive,log1)
 	
 		for i in range(5):
-			badblocks(drive,log1)
+			ok = badblocks(drive,log1)
+			
+			if ok != 0:
+				time.sleep(3600)
 			
 		smartctl_scan(drive,log1)
 		
