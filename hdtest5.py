@@ -1,21 +1,27 @@
 import numpy as np
 import time
 import random
+import logging
+import signal
+import os
 
-def nohup():
+def set_nohup():
 	signal.signal(signal.SIGHUP, signal.SIG_IGN)
 	
 class hdtest(object):
 	
-	def __init__(self, root, log, maxlen, minlen):
+	def __init__(self, root, log, maxlen, minlen=None,flen=.0001):
 		
 		self.root = root
 		self.maxlen = maxlen # TB
-		self.minlen = minlen
+		if minlen == None:
+			self.minlen = .8 * maxlen
+		else:
+			self.minlen = float(minlen)
 		self.chunk = None
 		self.sweeplen = None
 		self.tree = None
-		self.flen = 0.001
+		self.flen = float(flen)
 		
 		fmt='%(asctime)s %(levelname)s %(message)s'	
 		logging.basicConfig(filename=log,format=fmt,level=logging.INFO)
@@ -25,26 +31,27 @@ class hdtest(object):
 		
 	def make_tree(self):
 		
-		ndirs = 100
-		nfiles_per_dir = 100
+
+		nfiles_per_dir = 1000
 		
-		nfiles = int(self.sweeplen / self.flen)
-		
-		tree = []
+		nfiles = max(1,int(self.sweeplen / self.flen))
+		ndirs = max(1,nfiles/nfiles_per_dir)		
+		self.tree = []
+
+		print"%i total files over %i directories to span %.2f TB"%(nfiles,ndirs,self.sweeplen)
 		i = 0
-		for d in ndirs:
+		for d in range(ndirs):
 			
 			dirname = os.path.join(self.root,str(d))
-			os.makedir(dirname)
+			os.mkdir(dirname)
 			
-			for f in nfiles_per_dir:
+			for f in range(nfiles_per_dir):
 				
 				if i == nfiles:
-					self.tree = tree
 					return
 									
-				fname = os.path.join(dirname,str(f))
-				tree.append(fname)
+				fname = os.path.join(dirname,str(f)+".npy")
+				self.tree.append(fname)
 				i += 1
 				
 	def clear_tree(self):
@@ -73,57 +80,87 @@ class hdtest(object):
 		
 		self.sweeplen = self.minlen + (self.maxlen-self.minlen)*random.random()
 		
-		nelements = int(1e12 * flen/4.0)
+		nelements = int(1e12 * self.flen/4.0)
 		self.chunk = np.random.random(nelements)
 		
-		self.make_tree()
-		
+		print "%.3e" % ( nelements)
+
+
 		failures = 0
 		
+		self.make_tree()
+
 		t0 = time.time()
+
+		files_written = 0
 		
-		for f in tree:
+		for f in self.tree:
 			
 			try:
-				np.save(chunk,f)
-			except:
+				np.save(f,self.chunk)
+				files_written += 1
+			except Exception as e:
 				failures += 1
+				print e
 		
 		t1 = time.time()
-		speed = self.sweeplen * 1e6 / (t1-t0) 
+		speed = self.sweeplen * 1e-6 / (t1-t0) 
 		
-		msg = "wrote %.2f TB at .2f MB/s" % (self.sweeplen,speed)
-		msg += "\t failed file writes = %i\n" %(failures)
+		msg = "wrote %.2f TB at %.2f MB/s\n" % (files_written * self.flen,speed)
+		msg += "\t failed file writes = %i\n\n" %(failures)
 		
 		logging.info(msg)
 		
 	def check(self):
-		
-		self.get_tree()
+
 		
 		word_errors = 0
 		file_errors = 0
 		
 		t0 = time.time()
+
+		self.get_tree()
 		
-		for f in tree:
+
+		files_read = 0
+		
+		for f in self.tree:
 			
 			try:
 				arr = np.loads(f)
+				files_read += 1
 			except:
 				file_errors += 1
 				
 			word_errors += np.sum(arr==self.chunk)
 			
 		t1 = time.time()
-		speed = self.sweeplen * 1e6 / (t1-t0) 
-		
-		msg = "read %.2f TB at .2f MB/s" % (self.sweeplen,speed)
+		speed = self.sweeplen * 1e-6 / (t1-t0) 
+
+
+
+		msg = "read %.2f TB at %.2f MB/s"%(files_read*self.flen,speed)
 		msg += "\t failed file reads = %i\n" %(file_errors)
-		msg += "\t word errors = %i\n" %(word_errors)
+		msg += "\t word errors = %i\n\n" %(word_errors)
 		
 		logging.info(msg)
 		
-		
-		
-		
+	def test(self,n=None,nohup=True):
+
+		if nohup:
+			set_nohup()
+		if n == None:
+			while True:
+				self.clear_tree()
+				self.fill()
+				self.check()
+
+		else:
+			for i in range(n):
+				self.clear_tree()
+				self.fill()
+				self.check()	
+
+if __name__ == "__main__":
+	hd = hdtest("/mnt/helium/test","test.log",.2)
+	hd.test(2)
