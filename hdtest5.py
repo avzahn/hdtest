@@ -162,5 +162,5 @@ class hdtest(object):
 				self.check()	
 
 if __name__ == "__main__":
-	hd = hdtest("/mnt/helium/test","test.log",.2)
-	hd.test(2)
+	hd = hdtest("/mnt/helium/test","test.log",7)
+	hd.test()
