@@ -104,10 +104,10 @@ class hdtest(object):
 				print e
 		
 		t1 = time.time()
-		speed = self.sweeplen * 1e-6 / (t1-t0) 
+		speed = self.sweeplen / (1e6*(t1-t0)) 
 		
-		msg = "wrote %.2f TB at %.2f MB/s\n" % (files_written * self.flen,speed)
-		msg += "\t failed file writes = %i\n\n" %(failures)
+		msg = "\n\twrote %.2f TB at %.2f MB/s" % (files_written * self.flen,speed)
+		msg += "\n\t\t failed file writes = %i\n\n" %(failures)
 		
 		logging.info(msg)
 		
@@ -135,13 +135,13 @@ class hdtest(object):
 			word_errors += np.sum(arr==self.chunk)
 			
 		t1 = time.time()
-		speed = self.sweeplen * 1e-6 / (t1-t0) 
+		speed = self.sweeplen / (1e6 * (t1-t0)) 
 
 
 
-		msg = "read %.2f TB at %.2f MB/s"%(files_read*self.flen,speed)
-		msg += "\t failed file reads = %i\n" %(file_errors)
-		msg += "\t word errors = %i\n\n" %(word_errors)
+		msg = "\nread %.2f TB at %.2f MB/s"%(files_read*self.flen,speed)
+		msg += "\n\t\t failed file reads = %i\n" %(file_errors)
+		msg += "\n\t\t word errors = %i\n\n" %(word_errors)
 		
 		logging.info(msg)
 		
@@ -162,5 +162,5 @@ class hdtest(object):
 				self.check()	
 
 if __name__ == "__main__":
-	hd = hdtest("/mnt/helium/test","test.log",7)
+	hd = hdtest("/mnt/helium/test","hdtest.log",6.5)
 	hd.test()
